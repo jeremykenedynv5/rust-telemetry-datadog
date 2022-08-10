@@ -8,7 +8,7 @@
 // Copyright (c) 2022 LukeMathWalker
 // License (MIT) https://github.com/LukeMathWalker/tracing-actix-web/blob/main/LICENSE-MIT
 
-use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+use actix_web::{web, App, HttpRequest, HttpServer, Responder, HttpResponse};
 use opentelemetry::{
     global, runtime::TokioCurrentThread, sdk::propagation::TraceContextPropagator,
 };
@@ -21,6 +21,17 @@ use tracing_subscriber::{EnvFilter, Registry};
 async fn greet(req: HttpRequest) -> impl Responder {
     let name = req.match_info().get("name").unwrap_or("World");
     format!("Hello {}!", &name)
+}
+
+#[derive(serde::Deserialize)]
+struct FormData {
+    name : String,
+    email: String
+}
+
+async fn create_user(form: web::Form<FormData>) -> HttpResponse {
+    tracing::info!("Operation succeeded: {}", form.name);
+    HttpResponse::Ok().finish()
 }
 
 fn init_telemetry() {
@@ -60,6 +71,7 @@ async fn main() -> io::Result<()> {
             .wrap(TracingLogger::default())
             .route("/", web::get().to(greet))
             .route("/{name}", web::get().to(greet))
+            .route("/create_user", web::post().to(create_user))
     })
     .bind("127.0.0.1:8000")?
     .run()
