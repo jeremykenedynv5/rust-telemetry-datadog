@@ -25,14 +25,51 @@ async fn greet(req: HttpRequest) -> impl Responder {
 }
 
 #[derive(serde::Deserialize)]
-struct FormData {
+pub struct FormData {
     name : String,
     email: String
 }
 
-async fn create_user(form: web::Form<FormData>) -> HttpResponse {
-    tracing::info!("Operation succeeded: {}", form.name);
-    HttpResponse::Ok().finish()
+#[tracing::instrument(
+    name = "Adding a new user details",
+    skip(form, connection_pool),
+    fields(
+        user_name = %form.name,
+        user_email = %form.email
+    )
+)]
+async fn create_user(form: web::Form<FormData>, connection_pool: web::Data<PgPool>) -> HttpResponse {
+    tracing::info!("Creating User: {}", form.name);
+    match insert_user(&connection_pool, &form).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+#[tracing::instrument(
+    name = "Saving new user details in the database",
+    skip(form, pool)
+)]
+pub async fn insert_user(pool: &PgPool, form: &FormData) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        INSERT INTO userinfo (id, email, name, created_at)
+        VALUES ($1, $2, $3, $4)
+        "#,
+        uuid::Uuid::new_v4(),
+        form.email,
+        form.name,
+        chrono::Utc::now()
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+        // Using the ? to return early
+        // if the function failed, returning a sqlx::Error;
+    })?;
+    Ok(())
 }
 
 fn init_telemetry() {
@@ -42,6 +79,7 @@ fn init_telemetry() {
     // Spans are exported in batch - recommended setup for a production application.
     global::set_text_map_propagator(TraceContextPropagator::new());
     let tracer = opentelemetry_datadog::new_pipeline()
+    // let tracer = opentelemetry_jaeger::new_pipeline()
         .with_service_name(app_name)
         .install_batch(TokioCurrentThread)
         .expect("Failed to install OpenTelemetry tracer.");
@@ -71,6 +109,9 @@ async fn main() -> io::Result<()> {
     let db_connection_string = "postgres://postgres:password@127.0.0.1:5432/userdb";
 
     let db_pool = PgPool::connect(db_connection_string).await.expect("Error connecting to database");
+    
+    // wrap the connection in a smart pointer
+    let db_pool = web::Data::new(db_pool);
 
     HttpServer::new(move || {
         App::new()
