@@ -3,24 +3,38 @@
 This project is a prototype to implement observervability in rust-actix-web framework. Traces are generated for each request and are stored in open-telemetry compatible services (Jaeger or Datadog).
 ## Prerequisites
 
-1. Using Jaeger:
+1. Postgres Environment:
+     
+     We use psql to do health_check of our database. Check [these instructions](https://www.timescale.com/blog/how-to-install-psql-on-mac-ubuntu-debian-windows/) on how to install it on your OS.
 
-To execute this example with Jaeger you need a running Jaeger instance.  
-You can launch one using Docker:
+     Run the following script to do database migration. The SKIP_DOCKER flag makes it easy to run migrations against an existing Postgres instance without having to tear it down manually and re-create it with scripts/init_db.sh.
 
-```bash
-docker run -d -p6831:6831/udp -p6832:6832/udp -p16686:16686 jaegertracing/all-in-one:latest
-```
+     ```
+     SKIP_DOCKER=true ./scripts/init_db.sh
+     ```
 
-2. Using Datadog:
+     If you are curious to check the database using a GUI, you may install [Pg Admin](https://www.pgadmin.org/) or [Adminer](https://www.adminer.org/) and connect using the dafault database connection string used in this project (for development purpose only) DATABASE_URL=postgres://postgres:password@127.0.0.1:5432/userdb.
 
-To execute this example with Datadog, first run version 7.22.0 or above of the datadog-agent locally as described [here](https://docs.datadoghq.com/agent/)
+2. Tracing Environment:    
 
-Hint: I used the following script to install dd-agent in Mac M1. You have to use your appropriate Datadog API key.
+    2.1 Using Jaeger:
 
-```
-DD_AGENT_MAJOR_VERSION=7 DD_API_KEY=<API-KEY-HERE> DD_SITE="datadoghq.com" bash -c "$(curl -L https://s3.amazonaws.com/dd-agent/scripts/install_mac_os.sh)"
-```
+    To execute this example with Jaeger you need a running Jaeger instance.  
+    You can launch one using Docker:
+
+    ```bash
+    docker run -d -p6831:6831/udp -p6832:6832/udp -p16686:16686 jaegertracing/all-in-one:latest
+    ```
+
+    2.2 Using Datadog:
+
+    To execute this example with Datadog, first run version 7.22.0 or above of the datadog-agent locally as described [here](https://docs.datadoghq.com/agent/)
+
+    Hint: I used the following script to install dd-agent in Mac M1. You have to use your appropriate Datadog API key.
+
+    ```
+    DD_AGENT_MAJOR_VERSION=7 DD_API_KEY=<API-KEY-HERE> DD_SITE="datadoghq.com" bash -c "$(curl -L https://s3.amazonaws.com/dd-agent/scripts/install_mac_os.sh)"
+    ```
 
 
 ## Running
