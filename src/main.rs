@@ -13,6 +13,7 @@ use opentelemetry::{
     global, runtime::TokioCurrentThread, sdk::propagation::TraceContextPropagator,
 };
 use std::io;
+use sqlx::PgPool;
 use tracing_actix_web::TracingLogger;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::layer::SubscriberExt;
@@ -65,6 +66,11 @@ fn init_telemetry() {
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     init_telemetry();
+    
+    // TODO: db connection string should be read from some env or config file
+    let db_connection_string = "postgres://postgres:password@127.0.0.1:5432/userdb";
+
+    let db_pool = PgPool::connect(db_connection_string).await.expect("Error connecting to database");
 
     HttpServer::new(move || {
         App::new()
@@ -72,6 +78,8 @@ async fn main() -> io::Result<()> {
             .route("/", web::get().to(greet))
             .route("/{name}", web::get().to(greet))
             .route("/create_user", web::post().to(create_user))
+            // Get a pointer copy and attach it to the application state
+            .app_data(db_pool.clone())
     })
     .bind("127.0.0.1:8000")?
     .run()
