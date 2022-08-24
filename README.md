@@ -17,26 +17,27 @@ This project is a prototype to implement observervability in rust-actix-web fram
 
 2. Tracing Environment:    
 
-    2.1 Using Jaeger:
+    There are few incompatibilities between datadog and OTel. and see more details about it in the following links.
+        1. https://docs.rs/opentelemetry-datadog/latest/opentelemetry_datadog/#quirks
+        2. https://docs.datadoghq.com/tracing/other_telemetry/connect_logs_and_traces/opentelemetry
+        3. https://github.com/open-telemetry/opentelemetry-rust/issues/820
+        4. https://github.com/tokio-rs/tracing/issues/1531
+    In order to circumvent the above issues, we send the traces to OTEL collector and use Datadog exporter to forword them to Datadog. More readings could be found in this link - https://docs.datadoghq.com/tracing/trace_collection/open_standards/otel_collector_datadog_exporter/
 
-    To execute this example with Jaeger you need a running Jaeger instance.  
-    You can launch one using Docker:
+    Follow the following steps to setup your tracing environment
 
-    ```bash
-    docker run -d -p6831:6831/udp -p6832:6832/udp -p16686:16686 jaegertracing/all-in-one:latest
+    1. Update datadog api key in otel_collector_config.yaml file in the root folder of this project
+    2. Run the OTEL collector container using the below script
+
+    HINT: make sure that your present working directory (pwd) is the root folder of this project
+
     ```
-
-    2.2 Using Datadog:
-
-    To execute this example with Datadog, first run version 7.22.0 or above of the datadog-agent locally as described [here](https://docs.datadoghq.com/agent/)
-
-    Hint: I used the following script to install dd-agent in Mac M1. You have to use your appropriate Datadog API key.
-
+    docker run \
+    -p 4317:4317 \
+    --hostname $(hostname) \
+    -v $(pwd)/otel_collector_config.yaml:/etc/otelcol-contrib/config.yaml \
+    otel/opentelemetry-collector-contrib:latest
     ```
-    DD_AGENT_MAJOR_VERSION=7 DD_API_KEY=<API-KEY-HERE> DD_SITE="datadoghq.com" bash -c "$(curl -L https://s3.amazonaws.com/dd-agent/scripts/install_mac_os.sh)"
-    ```
-
-
 ## Running
 
 You can launch this example with 
@@ -57,10 +58,17 @@ Hello OptimusPrime!
 
 ## Traces
 
-- If you have used Jaeger, you can look at the exported traces in your browser by visiting [http://localhost:16686](http://localhost:16686).  
-Spans will be also printed to the console in JSON format, as structured log records.
+Now insert a row to database using the belowe script
 
-- If you have used datadog, traces should appear in APM dashboard.
+```
+curl -i -X POST -d 'email=thomas_mann@hotmail.com&name=Tom' http://localhost:8000/create_user
+```
+
+This will insert a new row in the database returns a `HTTP 200 Success` response. 
+
+If you rerun the curl command, the query fails and you will get `HTTP 500 Internal Server Error` as response.
+
+We can invetigate this failure using traces and spans from Datadog APM dashboard (Please wait for 30-60 sec before for data to show up in datadog dashboard) . Looking through the  structured log records we can understand that the database insert has failed with "duplicate key value violates unique constraint" error. 
 
 ## Credits
 This application uses Open Source components. You can find the source code of their open source projects along with license information below. I acknowledge and am grateful to these developers for their contributions to open source.
