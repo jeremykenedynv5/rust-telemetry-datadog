@@ -47,15 +47,12 @@ cargo run
 ```
 
 An `actix-web` application will be listening on port `8000`.  
-You can fire requests to it with:
+
+You can fire the below request to it with and expect HTTP/1.1 200 OK as reponse:
 
 ```bash
-curl -v http://localhost:8000/OptimusPrime
+curl -i http://localhost:8000
 ```
-```text
-Hello OptimusPrime!
-```
-
 ## Traces
 
 Now insert a row to database using the belowe script

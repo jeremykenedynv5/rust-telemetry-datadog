@@ -18,12 +18,7 @@ use tracing_actix_web::TracingLogger;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{EnvFilter, Registry};
-use rust_telemetry_datadog::routes::create_user;
-
-async fn greet(req: HttpRequest) -> impl Responder {
-    let name = req.match_info().get("name").unwrap_or("World");
-    format!("Hello {}!", &name)
-}
+use rust_telemetry_datadog::routes::{ health_check, create_user };
 
 fn init_telemetry() {
     let app_name = "tracing-actix-datadog";
@@ -87,8 +82,7 @@ async fn main() -> io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
-            .route("/", web::get().to(greet))
-            .route("/{name}", web::get().to(greet))
+            .route("/", web::get().to(health_check))
             .route("/create_user", web::post().to(create_user))
             // Get a pointer copy and attach it to the application state
             .app_data(db_pool.clone())
