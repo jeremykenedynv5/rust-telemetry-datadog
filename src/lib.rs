@@ -4,3 +4,4 @@
 // distribution of this software for license terms.
 
 pub mod routes;
+pub mod telemetry;
