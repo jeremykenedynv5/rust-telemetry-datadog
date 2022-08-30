@@ -55,15 +55,25 @@ curl -i http://localhost:8000
 ```
 ## Traces
 
-Now insert a row to database using the belowe script
+1. Run as single query per time:
+    Now insert a row to database using the belowe script
 
-```
-curl -i -X POST -d 'email=thomas_mann@hotmail.com&name=Tom' http://localhost:8000/create_user
-```
+    ```
+    curl -i -X POST -d 'email=thomas_mann@hotmail.com&name=Tom' http://localhost:8000/create_user
+    ```
 
-This will insert a new row in the database returns a `HTTP 200 Success` response. 
+    This will insert a new row in the database returns a `HTTP 200 Success` response. 
 
-If you rerun the curl command, the query fails and you will get `HTTP 500 Internal Server Error` as response.
+    If you rerun the curl command, the query fails and you will get `HTTP 500 Internal Server Error` as response.
+
+2. Run as batch queries:
+    In new terminal window run the below command
+
+    ```
+    cargo run --example client
+    ```
+
+    This will insert multiple rows in database with some insert failures.
 
 We can invetigate this failure using traces and spans from Datadog APM dashboard (Please wait for 30-60 sec before for data to show up in datadog dashboard) . Looking through the  structured log records we can understand that the database insert has failed with "duplicate key value violates unique constraint" error. 
 
